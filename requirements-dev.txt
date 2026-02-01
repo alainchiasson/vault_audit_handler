@@ -1,0 +1,6 @@
+# Development-only dependencies
+pytest>=7.0
+black
+flake8
+isort
+pre-commit
