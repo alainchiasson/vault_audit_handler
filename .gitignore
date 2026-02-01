@@ -1,3 +1,8 @@
+# Project specific ingnore
+
+# Private log is where private logs are storred.
+.private_log/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
