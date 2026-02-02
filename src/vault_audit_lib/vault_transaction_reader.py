@@ -1,7 +1,7 @@
 """Buffered reader that groups Vault log entries into transactions.
 
-`VaultTransactionReader` wraps a `PrivateLogReader`/`VaultLogReader` (the
-package exposes `PrivateLogReader` from `vault_log_reader`) and yields
+`VaultTransactionReader` wraps a `VaultLogReader` (the
+package exposes `VaultLogReader` from `vault_log_reader`) and yields
 transactions. A transaction is the set of all log events that share the
 same `request.id`.
 
@@ -21,33 +21,20 @@ from .vault_log_reader import VaultLogReader
 def _extract_request_id(entry: Any) -> Optional[str]:
     if not isinstance(entry, dict):
         return None
-    # Common patterns: entry['request']['id'] or entry['request_id']
+    # Get entry["request"]["id"] Or None
     req = entry.get("request")
     if isinstance(req, dict):
         rid = req.get("id")
         if isinstance(rid, str):
             return rid
-    for key in ("request_id", "req_id", "id"):
-        val = entry.get(key)
-        if isinstance(val, str):
-            return val
     return None
 
 
 def _default_is_final(entry: Any) -> bool:
     if not isinstance(entry, dict):
         return False
-    if "response" in entry:
-        return True
-    t = entry.get("type")
-    if isinstance(t, str) and t.lower() in (
-        "response",
-        "end",
-        "completed",
-        "request_end",
-    ):
-        return True
-    if "duration" in entry:
+    entry_type = entry.get("type")
+    if isinstance(entry_type, str) and entry_type.lower() == "response":
         return True
     return False
 
