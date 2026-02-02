@@ -15,7 +15,7 @@ from typing import IO, Any, Generator, Union
 
 
 class VaultLogReader:
-    """Read entries from a `.private_log` file.
+    """Read entries from a Vault audit log file.
 
     Usage:
       reader = VaultLogReader(path)
