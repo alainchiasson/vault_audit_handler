@@ -37,15 +37,8 @@ class VaultEventFilter:
             cur = cur.get(part)
         return cur
 
-    def match(self, entry: Any) -> bool:
-        """Return True if `entry` matches the configured key/value.
-
-        Matching rules:
-        - If `value` is callable: return `bool(value(found))`.
-        - If `value` is a compiled `re.Pattern`: return whether it matches
-          the stringified found value.
-        - Otherwise: return equality comparison `found == value`.
-        """
+    def _match_single(self, entry: Any) -> bool:
+        """Match a single event entry (not a transaction)."""
         found = self._lookup(entry)
         # Callable matcher
         if callable(self.value):
@@ -65,6 +58,41 @@ class VaultEventFilter:
 
         # Default equality
         return found == self.value
+
+    def match(self, entry: Any) -> bool:
+        """Return True if `entry` matches the configured key/value.
+
+        Supports transactions represented as `(request_id, entries_iterable)`;
+        in that case the method returns True if any event in the transaction
+        matches the configured criterion.
+        """
+        # Detect transaction-like inputs and return True if any contained
+        # event matches. Supported forms:
+        # - (request_id, entries_iterable)
+        # - sequence-of-events: [event1, event2, ...]
+        if isinstance(entry, (list, tuple)):
+            # (request_id, entries)
+            if (
+                len(entry) >= 2
+                and isinstance(entry[0], str)
+                and hasattr(entry[1], "__iter__")
+                and not isinstance(entry[1], (str, bytes))
+            ):
+                entries_iter = entry[1]
+            else:
+                # treat the whole sequence as events
+                entries_iter = entry
+
+            # If entries_iter is a string/bytes, treat as single entry
+            if isinstance(entries_iter, (str, bytes)):
+                return self._match_single(entries_iter)
+
+            for ev in entries_iter:
+                if self._match_single(ev):
+                    return True
+            return False
+
+        return self._match_single(entry)
 
 
 __all__ = ["VaultEventFilter"]
